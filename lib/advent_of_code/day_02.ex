@@ -1,47 +1,40 @@
 defmodule AdventOfCode.Day02 do
-  import AOCUtils
   import AdventOfCode.Input
 
   def part1(_args) do
     get!(2)
-    |> lines_from_text()
-    |> Enum.map(&split_string/1)
-    |> Enum.map(&string_to_ints/1)
-    |> Enum.filter(&is_ordered/1)
-    |> Enum.filter(&valid_step?/1)
-    |> Enum.count()
+    |> parse()
+    |> Enum.filter(&safe?/1)
+    |> length()
   end
 
   def part2(_args) do
     get!(2)
-    |> lines_from_text()
-    |> Enum.map(&split_string/1)
-    |> Enum.map(&string_to_ints/1)
+    |> parse()
+    |> Enum.filter(&safeish?/1)
+    |> Enum.count()
   end
 
-  def valid_step?(list) do
-    list
-    |> Enum.zip(tl(list))
-    |> Enum.all?(fn {a, b} -> b - a >= 1 and b - a <= 3 end)
+  defp parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&parse_line/1)
   end
 
-  def is_ordered(list) do
-    asc = Enum.sort(list)
-    desc = Enum.sort(list, :desc)
-
-    cond do
-      list == asc -> list
-      list == desc -> Enum.reverse(list)
-      true -> nil
-    end
+  defp parse_line(line) do
+    Enum.map(String.split(line, " "), &String.to_integer/1)
   end
 
-  def split_string(string) do
-    String.split(string, " ", trim: true)
-  end
+  defp safe?([a, b | _] = list) when a < b, do: safe?(:asc, list)
+  defp safe?([a, b | _] = list) when a > b, do: safe?(:desc, list)
+  defp safe?([a, a | _]), do: false
+  defp safe?(:asc, [a, b | rest]) when abs(a - b) in 1..3 and a < b, do: safe?(:asc, [b | rest])
+  defp safe?(:desc, [a, b | rest]) when abs(a - b) in 1..3 and a > b, do: safe?(:desc, [b | rest])
+  defp safe?(_, [_last]), do: true
+  defp safe?(_, _), do: false
 
-  def string_to_ints(line) do
-    line
-    |> Enum.map(&String.to_integer/1)
+  defp safeish?(list) do
+    candidates = [list | Enum.map(0..(length(list) - 1), &List.delete_at(list, &1))]
+    Enum.any?(candidates, &safe?/1)
   end
 end
