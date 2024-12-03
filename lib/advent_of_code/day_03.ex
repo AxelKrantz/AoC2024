@@ -18,35 +18,30 @@ defmodule AdventOfCode.Day03 do
 
   def part2(_args) do
     input = AdventOfCode.Input.get!(3)
-    prefix = "do()"
 
-    input =
-      prefix <> input
-
-    validate_expression(input, 0)
+    find_data(:enabled, input, 0)
   end
 
-  def validate_expression(string, sum) do
-    IO.puts("Current sum: #{sum}")
+  def find_data(:disabled, string, sum) do
+    case Regex.run(~r/.*?do\(\)(.*)/, string, capture: :all_but_first) do
+      [rest] -> find_data(:enabled, rest, sum)
+      nil -> sum
+    end
+  end
 
-    case Regex.run(~r/(.*?mul\(\d{1,3},\d{1,3}\))(.*)/, string, capture: :all_but_first) do
-      result when is_list(result) ->
-        [matched, leftover] = result
+  def find_data(:enabled, string, sum) do
+    case Regex.run(~r/.*?(don't\(\)|mul\(\d+,\d+\))(.*)/, string, capture: :all_but_first) do
+      [first_match, rest] ->
+        case first_match do
+          "don't()" ->
+            find_data(:disabled, rest, sum)
 
-        conditionals =
-          Regex.scan(~r/do\(\)|don't\(\)/, matched)
-          |> Enum.map(&hd/1)
-
-        if last_is_do?(conditionals) do
-          IO.inspect("Conditionals: #{conditionals}")
-          new_sum = scan(matched) + sum
-          validate_expression(leftover, new_sum)
-        else
-          validate_expression(leftover, sum)
+          _ ->
+            new_sum = sum + scan(first_match)
+            find_data(:enabled, rest, new_sum)
         end
 
       nil ->
-        IO.puts("No match found.")
         sum
     end
   end
